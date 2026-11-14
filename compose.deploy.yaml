@@ -1,0 +1,91 @@
+name: maxtelecom-demo
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: maxtelecom
+      POSTGRES_USER: magistral
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:-maxtelecom_local_demo}
+    volumes: [database:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U magistral -d maxtelecom]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+    restart: unless-stopped
+  optimizer:
+    build: {context: ., dockerfile: optimizer/Dockerfile}
+    mem_limit: 1g
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+    restart: unless-stopped
+  routing-prepare:
+    build: {context: ., dockerfile: Dockerfile.routing}
+    volumes: [roads:/data]
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        if [ ! -f /data/prepared ]; then
+          gunzip -c /seed/ekaterinburg.osm.gz > /data/ekaterinburg.osm
+          osrm-extract --threads 2 -p /opt/car.lua /data/ekaterinburg.osm
+          osrm-partition --threads 2 /data/ekaterinburg.osrm
+          osrm-customize --threads 2 /data/ekaterinburg.osrm
+          touch /data/prepared
+        fi
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend@sha256:e1929ae2818226284d7ef007329098a30851c11528ab3712bc9c8d68da78278b
+    volumes: [roads:/data:ro]
+    command: [osrm-routed, --algorithm, mld, --threads, '2', /data/ekaterinburg.osrm]
+    depends_on:
+      routing-prepare: {condition: service_completed_successfully}
+    restart: unless-stopped
+  bootstrap:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    user: '0:0'
+    entrypoint: [/app/demo-init]
+    environment:
+      DATABASE_URL: postgres://magistral:${DEMO_DB_PASSWORD:-maxtelecom_local_demo}@postgres:5432/maxtelecom?sslmode=disable
+      OPTIMIZER_URL: http://optimizer:8090
+      DEMO_DATE: ${DEMO_DATE:-2026-11-16}
+    volumes: [credentials:/demo]
+    depends_on:
+      postgres: {condition: service_healthy}
+      optimizer: {condition: service_healthy}
+  api:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    environment:
+      DATABASE_URL: postgres://magistral:${DEMO_DB_PASSWORD:-maxtelecom_local_demo}@postgres:5432/maxtelecom?sslmode=disable
+      HTTP_ADDR: :8080
+      APP_ORIGINS: http://localhost:${DEMO_PORT:-3000},http://127.0.0.1:${DEMO_PORT:-3000}
+      OSRM_URL: http://osrm:5000
+      OPTIMIZER_URL: http://optimizer:8090
+    volumes: [credentials:/demo:ro]
+    depends_on:
+      bootstrap: {condition: service_completed_successfully}
+      osrm: {condition: service_started}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/api/v1/health]
+      interval: 3s
+      timeout: 3s
+      retries: 60
+    restart: unless-stopped
+  frontend:
+    build: {context: ., dockerfile: Dockerfile.frontend}
+    environment:
+      API_PROXY_TARGET: http://api:8080
+    ports: ['127.0.0.1:${DEMO_PORT:-3000}:3000']
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 60
+    restart: unless-stopped
+volumes:
+  database:
+  roads:
+  credentials:

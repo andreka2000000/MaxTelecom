@@ -1,0 +1,2 @@
+FROM ghcr.io/project-osrm/osrm-backend@sha256:e1929ae2818226284d7ef007329098a30851c11528ab3712bc9c8d68da78278b
+COPY data/routing/ekaterinburg.osm.gz /seed/ekaterinburg.osm.gz

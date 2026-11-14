@@ -1,0 +1,348 @@
+.selected-shift-note {
+  flex: 0 0 100%;
+  color: #b9a0c9;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.app-shell .page-header {
+  flex-wrap: wrap;
+}
+.app-shell .main,
+.live-content > *,
+.live-dispatch-grid > *,
+.technician-grid > * {
+  min-width: 0;
+}
+.mobile-identity {
+  display: none;
+}
+.shell-compact .nav-label {
+  display: none;
+}
+.technician-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.technician-shortcuts a {
+  padding: 12px 16px;
+  border: 1px solid #62417b;
+  border-radius: 10px;
+  color: #dfc9f5;
+  font-size: 12px;
+}
+.route-list-collapse {
+  margin: 20px 0;
+}
+.route-list-collapse summary {
+  cursor: pointer;
+  padding: 14px 0;
+  color: #dac0f0;
+}
+#my-tasks,
+#route-map {
+  scroll-margin-top: 85px;
+}
+@media (max-width: 950px) {
+  .role-technician .technician-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .role-technician .technician-map-section {
+    grid-row: 1;
+  }
+  .role-technician .technician-map-section .live-map-frame {
+    position: relative;
+    top: 0;
+    height: 440px;
+    min-height: 360px;
+  }
+}
+@media (max-width: 650px) {
+  .app-shell {
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+  .app-shell .sidebar {
+    position: sticky;
+    inset: 0 0 auto;
+    min-height: 64px;
+    padding: 10px 16px;
+    gap: 12px;
+    backdrop-filter: none;
+  }
+  .app-shell .sidebar .brand .sidebar-label {
+    display: none;
+  }
+  .app-shell .sidebar .brand {
+    flex: 0 0 auto;
+  }
+  .app-shell .mobile-identity {
+    display: grid;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+  .mobile-identity strong {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-identity small {
+    font-size: 10px;
+    color: #bca2cd;
+  }
+  .app-shell .sidebar nav {
+    position: fixed;
+    inset: auto 0 0;
+    height: calc(76px + env(safe-area-inset-bottom));
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 6px;
+    background: #140e1cf5;
+    border-top: 1px solid #65437d;
+    z-index: 40;
+  }
+  .app-shell .sidebar nav .nav-link {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 10px;
+    min-height: 60px;
+    padding: 8px 4px;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .app-shell .sidebar nav .nav-link .nav-label {
+    display: block;
+    max-width: 120px;
+  }
+  .app-shell .sidebar-bottom {
+    flex: 0 0 auto;
+  }
+  .app-shell .sidebar-logout {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .app-shell .main,
+  .app-shell.shell-compact .main {
+    margin: 0;
+    width: 100%;
+  }
+  .app-shell .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px 16px 14px;
+    gap: 12px;
+  }
+  .app-shell .heading-block h1 {
+    font-size: 23px;
+  }
+  .app-shell .heading-block p {
+    max-width: none;
+    font-size: 12px;
+  }
+  .app-shell .header-controls {
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  .app-shell .day-picker {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+  .app-shell .day-picker select {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    font-size: 14px;
+    min-height: 46px;
+  }
+  .app-shell .page-content {
+    padding: 18px 14px 28px;
+  }
+  .app-shell .live-panel {
+    padding: 18px;
+  }
+  .app-shell .live-panel p,
+  .app-shell .request-description,
+  .app-shell .request-address,
+  .app-shell .next-address {
+    overflow-wrap: anywhere;
+    font-size: 14px;
+  }
+  .app-shell .live-panel small,
+  .app-shell .muted {
+    line-height: 1.6;
+  }
+  .app-shell button,
+  .app-shell .technician-shortcuts a {
+    min-height: 44px;
+  }
+  .app-shell .primary-button,
+  .app-shell .secondary-button {
+    padding: 12px 14px;
+    font-size: 13px;
+    white-space: normal;
+    justify-content: center;
+  }
+  .app-shell .live-form input,
+  .app-shell .live-form select,
+  .app-shell .live-form textarea,
+  .app-shell .team-search input,
+  .app-shell .live-search input {
+    font-size: 16px;
+    min-height: 46px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .app-shell .live-form label,
+  .app-shell .request-decision label {
+    font-size: 13px;
+    min-width: 0;
+  }
+  .app-shell .live-form input[type='checkbox'] {
+    min-height: 22px;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .app-shell .live-form .checkbox-label {
+    line-height: 1.5;
+  }
+  .app-shell .modal {
+    width: calc(100% - 20px);
+    max-width: calc(100% - 20px);
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 18px;
+    overflow-x: hidden;
+  }
+  .app-shell .modal-header {
+    position: sticky;
+    top: -18px;
+    z-index: 2;
+    background: #1b1025;
+    padding-top: 12px;
+    gap: 12px;
+  }
+  .app-shell .modal-header h2 {
+    font-size: 19px;
+    min-width: 0;
+  }
+  .app-shell .form-stack,
+  .app-shell .form-columns {
+    min-width: 0;
+  }
+  .app-shell .form-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-shell .equipment-inputs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .app-shell .filter-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    padding-bottom: 5px;
+  }
+  .app-shell .filter-chips button {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+  .app-shell .live-orders {
+    max-height: 500px;
+    overscroll-behavior: contain;
+  }
+  .app-shell .live-order footer {
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .app-shell .live-dispatch-grid,
+  .app-shell .lower-grid,
+  .app-shell .request-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-shell .timeline-scroll,
+  .app-shell .table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .app-shell .role-access-grid,
+  .app-shell .account-form {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+  .app-shell .request-decision > div {
+    min-width: 0;
+  }
+  .app-shell .request-decision .primary-button,
+  .app-shell .request-decision .secondary-button {
+    width: 100%;
+  }
+  .app-shell .role-technician,
+  .app-shell .technician-route-column {
+    min-width: 0;
+  }
+  .role-technician .technician-hero {
+    padding: 20px;
+  }
+  .role-technician .technician-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .role-technician .technician-map-section .live-map-frame {
+    height: 46dvh;
+    min-height: 300px;
+    max-height: 420px;
+  }
+  .role-technician .technician-route-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .role-technician .road-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .role-technician .road-metrics strong {
+    font-size: 24px;
+    overflow-wrap: anywhere;
+  }
+  .role-technician .road-metrics small {
+    font-size: 10px;
+  }
+  .technician-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .technician-shortcuts a {
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 11px;
+  }
+  .app-shell .route-stop-card {
+    min-width: 0;
+  }
+  .app-shell .route-stop-card > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .app-shell .execution-task .live-section-title {
+    align-items: start;
+  }
+  .app-shell .execution-task .live-section-title strong {
+    flex: 1;
+    min-width: 0;
+  }
+  .app-shell .execution-task small {
+    overflow-wrap: anywhere;
+  }
+}

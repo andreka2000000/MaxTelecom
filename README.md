@@ -1,18 +1,80 @@
-# Smart_dispatching_of_field_brigades
+# МаксТелеком — умная диспетчеризация выездных бригад
 
-Frontend: Next.js App Router + React + TypeScript. Backend: Go (`backend/`).
+Next.js App Router + React + TypeScript, Go API, PostgreSQL, локальный OSRM и внутренний Python-сервис PyVRP для первоначального распределения. При ошибке оптимизатора работает базовый алгоритм Go.
+
+## Запуск для жюри одной командой
+
+Скачайте репозиторий и откройте терминал в его каталоге. Нужен работающий Docker
+с Compose v2 и Linux-контейнерами; устанавливать Node.js, Go, Python и PostgreSQL
+на компьютере не требуется. При первой сборке нужен интернет для Docker-образов
+и зависимостей.
 
 ```sh
-npm ci
-npm run dev
+docker compose -f compose.deploy.yaml up -d --build --wait
 ```
 
-Local frontend: http://127.0.0.1:3000. Design reference: https://dispatch-two-bay.vercel.app/.
+Откройте http://localhost:3000/login. Автоматически загружаются **400 учебных
+нарядов и 40 сотрудников на 16 ноября 2026**, строится план, создаются диспетчер,
+абонент и аккаунты всех сотрудников. Дорожный граф входит в репозиторий,
+подготавливается автоматически и сохраняется в томе Docker. Число назначений
+смотрите в фактическом результате расчёта.
 
-- `/` — Russian marketing homepage, independent of the Go API.
-- `/app/dispatch` — dispatcher demo; `/app/technician` and `/app/admin` — role workspaces.
+Получить автоматически сгенерированные логины и пароли:
 
-- Frontend setup and backend connection: [docs/FRONTEND.md](docs/FRONTEND.md)
-- PyVRP evaluation: [docs/PYVRP.md](docs/PYVRP.md)
-- Organizer contract: [contracts/api_spec.yaml](contracts/api_spec.yaml)
-- Checks: `npm run check`
+```sh
+docker compose -f compose.deploy.yaml exec --user 0 api cat /demo/demo-accounts.json
+```
+
+Основные логины: `dispatcher`, `subscriber`, `technician` (ST-001), остальные
+`demo.st-002` … `demo.st-040`. Пароли случайные, хранятся только в локальном
+Docker-томе. Повтор той же команды запуска сохраняет данные и пароли. Остановка:
+`docker compose -f compose.deploy.yaml down`. Не добавляйте `-v`, если данные нужны.
+Этот сценарий использует отдельный Compose-проект `maxtelecom-demo`, не затрагивая
+существующую локальную разработку. Порт меняется переменной `DEMO_PORT`; например,
+в PowerShell: `$env:DEMO_PORT=3010` перед запуском. Для нового чистого набора можно
+задать `DEMO_DATE`; существующие смены автоматически не заменяются.
+
+Это локальная HTTP-демонстрация на компьютере жюри. История и пароли с компьютера
+разработчика не публикуются; на новом устройстве создаётся свежий учебный набор.
+
+## Локальная разработка и прежние сценарии
+
+Первый запуск для разработки:
+
+```powershell
+npm ci
+npm run routing:prepare
+npm run demo:generate
+npm run demo:load
+npm run auth:bootstrap
+```
+
+Персональный вход и права: после запуска выполните `npm run auth:bootstrap`. Локальные пароли — в `work/demo-accounts.json`. [Роли, рабочие страницы и запуск](docs/ACCESS_AND_WORKSPACE.md).
+
+Последующие запуски: `docker compose --profile routing up -d --build --wait`.
+
+В текущем локальном окружении интерфейс: http://127.0.0.1:3001/login (FRONTEND_PORT=3001). Без настройки Compose использует порт 3000.
+
+Для защиты подготовлена смена **16 ноября 2026 года: 400 нарядов, 40 сотрудников, время Екатеринбурга**. [Полное руководство и сценарий защиты](docs/USER_GUIDE.md). Повторная подготовка на новую дату без замены истории: `npm run demo:prepare -- --date 2026-11-16 --accounts`. В интерфейсе: «Центр управления → Новая смена → Копия набора на другую дату». Мобильные рабочие страницы проверены на ширинах 320/390/768 px.
+
+- `/` — главная МаксТелеком.
+- `/app/dispatch` — диспетчерская с реальными данными и событиями.
+- `/app/technician` — маршрут мастера.
+- `/app/admin` — центр управления диспетчера: ресурсы, справочники и доступы.
+- `/app/requests` — входящие обращения абонентов для диспетчера.
+- `/app/subscriber` — кабинет абонента, создание и просмотр своих обращений.
+- `/login` — персональный вход. Отдельная роль администратора объединена с диспетчером.
+
+Для первого запуска с дорожным графом и полным учебным набором: `npm ci`, `npm run routing:prepare`, `npm run demo:generate`, `npm run demo:load`. Создаётся отдельная БД magistral_training: 40 сотрудников, 5 СЦ и 400 нарядов. Прежняя БД magistral сохраняется. Повторный импорт учебных данных требует явного `npm run demo:load -- --replace`; для обычного запуска он не нужен.
+
+- [Frontend, структура и запуск](docs/FRONTEND.md)
+- [Полное руководство пользователя и защита MVP](docs/USER_GUIDE.md)
+- [Backend, бизнес-правила и API](backend/README.md)
+- [Готовность MVP](docs/MVP_STATUS.md)
+- [Дорожная маршрутизация и запуск](docs/ROUTING.md)
+- [Сверка ТЗ и размеры данных](docs/CASE_REQUIREMENTS.md)
+- [Учебные файлы](data/synthetic/README.md)
+- [PyVRP: интеграция, замеры и проверка](docs/PYVRP.md)
+- [Контракт организаторов](contracts/api_spec.yaml)
+
+Для разработки frontend: `npm ci`, `npm run dev`. Проверки: `npm run check`.

@@ -11,6 +11,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "generate:api": "openapi-typescript contracts/api_spec.yaml -o src/shared/api/schema.d.ts",
+    "routing:prepare": "node scripts/prepare-routing.mjs",
+    "demo:generate": "node scripts/generate-synthetic.mjs",
+    "demo:load": "node scripts/load-synthetic.mjs",
+    "demo:prepare": "node scripts/prepare-demo.mjs",
+    "optimizer:benchmark": "docker compose --profile tools run --build --rm benchmark",
+    "optimizer:test": "docker compose run --build --rm --no-deps -v ./backend/testdata:/fixtures:ro optimizer python -m unittest -v",
+    "auth:bootstrap": "node scripts/bootstrap-auth.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "start": "next start --hostname 127.0.0.1"
   },
