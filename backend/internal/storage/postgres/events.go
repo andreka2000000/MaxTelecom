@@ -11,6 +11,7 @@ import (
 )
 
 var ErrNoPlan = errors.New("build an initial plan before accepting events")
+var ErrEventConflict = errors.New("event identifier already belongs to another payload")
 
 // A session lock serializes events across API processes without holding a SQL
 // transaction open during solving. Cancellation also covers waiting in queue.
@@ -58,14 +59,35 @@ type EventInputs struct {
 	State domain.EventState
 }
 
-func (s *Store) Duplicate(ctx context.Context, date, id string) (*dto.EventResult, error) {
-	var raw []byte
-	e := s.Pool.QueryRow(ctx, `SELECT e.result FROM events e JOIN days d ON d.date=e.day AND d.generation=e.generation WHERE d.date::text=$1 AND e.event_id=$2`, date, id).Scan(&raw)
+func (s *Store) Duplicate(ctx context.Context, date string, input dto.EventInput, hash string) (*dto.EventResult, error) {
+	var raw, document []byte
+	var storedHash, mode string
+	e := s.Pool.QueryRow(ctx, `SELECT e.result,e.document,e.request_hash,d.clock_mode FROM events e JOIN days d ON d.date=e.day AND d.generation=e.generation WHERE d.date::text=$1 AND e.event_id=$2`, date, input.EventId).Scan(&raw, &document, &storedHash, &mode)
 	if errors.Is(e, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if e != nil {
 		return nil, e
+	}
+	if storedHash != "" {
+		if storedHash != hash {
+			return nil, ErrEventConflict
+		}
+	} else {
+		// Older journal entries predate request hashes. Compare their persisted
+		// payload, allowing only the server-owned timestamp to differ.
+		var previous dto.EventInput
+		if e = json.Unmarshal(document, &previous); e != nil {
+			return nil, e
+		}
+		if mode == "LIVE" {
+			input.Timestamp = previous.Timestamp
+		}
+		a, _ := json.Marshal(input)
+		b, _ := json.Marshal(previous)
+		if string(a) != string(b) {
+			return nil, ErrEventConflict
+		}
 	}
 	var r dto.EventResult
 	e = json.Unmarshal(raw, &r)

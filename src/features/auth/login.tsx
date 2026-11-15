@@ -64,7 +64,14 @@ export function Login() {
               const channel = new BroadcastChannel('maxtelecom-auth');
               channel.postMessage('changed');
               channel.close();
-              window.location.replace(roleHome[user.role]);
+              const service = new URLSearchParams(window.location.search).get('service');
+              window.location.replace(
+                user.role === 'SUBSCRIBER' &&
+                  service &&
+                  ['INTERNET', 'REPAIR', 'TV'].includes(service)
+                  ? `/app/subscriber?service=${service}`
+                  : roleHome[user.role],
+              );
             } catch (err) {
               setError(err instanceof Error ? err.message : 'Не удалось войти.');
               setBusy(false);

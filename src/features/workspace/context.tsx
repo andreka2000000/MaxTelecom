@@ -136,6 +136,13 @@ export function OperationNotice() {
     return (
       <div role="alert" className="operation-notice error">
         {errorText(error)}{' '}
+        {w.event.error &&
+          ['EVENT_DEADLINE', 'BACKEND_UNAVAILABLE'].includes(
+            (w.event.error as { code?: string }).code || '',
+          ) &&
+          w.event.variables?.timestamp?.slice(0, 10) === w.date && (
+            <button onClick={() => w.event.mutate(w.event.variables!)}>Повторить отправку</button>
+          )}
         <button
           onClick={() => {
             w.event.reset();
@@ -157,6 +164,10 @@ export function OperationNotice() {
       <div role="status" className="operation-notice success">
         {result.duplicate ? 'Событие уже было обработано' : 'Изменение принято'} · версия{' '}
         {result.plan_version}
+        {' · изменено маршрутов: '}
+        {result.changed_staff_ids?.length || 0}
+        {' · новых предупреждений: '}
+        {result.new_alerts?.length || 0}
       </div>
     );
   return null;

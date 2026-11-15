@@ -4,6 +4,7 @@ import { Bell, CalendarDays, RefreshCw } from 'lucide-react';
 import { useOptionalWorkspace } from '@/features/workspace/context';
 import { countText } from '@/features/workspace/model';
 import { ClockControl } from '@/features/workspace/clock';
+import { NotificationCenter } from '@/features/workspace/notification-center';
 export function PageHeader({
   title,
   subtitle,
@@ -73,15 +74,11 @@ export function PageHeader({
             {active.length > 0 && <i />}
           </button>
         )}
-        {w && notifications && (
-          <div className="notifications" role="status">
-            <strong>Уведомления</strong>
-            {active.length ? (
-              active.slice(0, 5).map((a) => <p key={a.alert_id}>{a.message}</p>)
-            ) : (
-              <p>Активных предупреждений нет.</p>
-            )}
-          </div>
+        {w?.data && notifications && (
+          <NotificationCenter
+            key={`${w.date}:${w.data.generation}`}
+            onClose={() => setNotifications(false)}
+          />
         )}
       </div>
       {w?.data && (

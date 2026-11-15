@@ -60,9 +60,14 @@ function DispatcherContent() {
         (filter === 'Без назначения' && o.status === 'Без назначения') ||
         (filter === 'ПГП' && !!o.groupId) ||
         (filter === 'В работе' &&
-          ['Назначена', 'На объекте', 'Окно визита идёт', 'Ожидает подтверждения'].includes(
-            o.status,
-          )) ||
+          [
+            'Назначена',
+            'В пути',
+            'Прибыл на объект',
+            'Работа начата',
+            'Окно визита идёт',
+            'Ожидает подтверждения',
+          ].includes(o.status)) ||
         (filter === 'Завершены' && ['Выполнена', 'Отменена'].includes(o.status))),
   );
   const route = d.plan?.routes.find((r) => r.staff_id === (staffId || selectedOrder?.staffId));
@@ -283,18 +288,25 @@ function DispatcherContent() {
             {d.reference.staff.map((s) => {
               const r = d.plan?.routes.find((r) => r.staff_id === s.staff_id);
               const absent = d.day.absent_staff_ids?.includes(s.staff_id);
+              const actual = orders.find(
+                (o) =>
+                  o.staffId === s.staff_id &&
+                  ['В пути', 'Прибыл на объект', 'Работа начата'].includes(o.status),
+              );
               const state = absent
                 ? 'Не на смене'
                 : r?.status === 'UNAVAILABLE'
                   ? 'Недоступен'
-                  : r?.stops.some(
-                        (x) =>
-                          x.type === 'VISIT' &&
-                          Date.parse(x.start) <= Date.parse(d.day.now) &&
-                          Date.parse(x.end) > Date.parse(d.day.now),
-                      )
-                    ? 'На объекте'
-                    : 'На смене';
+                  : actual
+                    ? actual.status
+                    : r?.stops.some(
+                          (x) =>
+                            x.type === 'VISIT' &&
+                            Date.parse(x.start) <= Date.parse(d.day.now) &&
+                            Date.parse(x.end) > Date.parse(d.day.now),
+                        )
+                      ? 'Визит по плану'
+                      : 'На смене';
               return (
                 <button
                   className={`live-person ${staffId === s.staff_id ? 'selected' : ''}`}
@@ -305,6 +317,11 @@ function DispatcherContent() {
                   <span className="avatar">{initials(staffName(s))}</span>
                   <div>
                     <strong>{staffName(s)}</strong>
+                    <small>
+                      {d.ratings?.[s.staff_id]
+                        ? `★ ${d.ratings[s.staff_id].average} · оценок: ${d.ratings[s.staff_id].count}`
+                        : 'Пока нет оценок'}
+                    </small>
                     <small>
                       {state} · {countText(r?.totals?.visits || 0, 'визит', 'визита', 'визитов')}
                     </small>

@@ -100,8 +100,16 @@ export function ordersView(data: Snapshot): ViewOrder[] {
         tone = 'blue';
       }
       const fact = data.facts?.find((f) => f.order_id === source.order_id);
+      if (fact?.status === 'EN_ROUTE') {
+        status = 'В пути';
+        tone = 'blue';
+      }
+      if (fact?.status === 'ARRIVED') {
+        status = 'Прибыл на объект';
+        tone = 'violet';
+      }
       if (fact?.status === 'IN_PROGRESS') {
-        status = 'На объекте';
+        status = 'Работа начата';
         tone = 'violet';
       }
       if (fact?.status === 'COMPLETED') {
@@ -140,7 +148,10 @@ export function errorText(error: unknown) {
     PLANNING_INPUT_CHANGED: 'Данные сменились во время расчёта. Обновите экран и повторите.',
     EVENT_DEADLINE:
       'Операция не подтвердилась вовремя. Повторите: сохранённый идентификатор защитит от дублирования.',
-    EVENT_INFEASIBLE: 'Изменение противоречит уже начатым работам или ограничениям смены.',
+    EVENT_INFEASIBLE:
+      'Изменение не применено: оно нарушает ограничения смены или подтверждённую историю. Прежний план сохранён. Уточните время задержки или недоступности.',
+    EVENT_ID_CONFLICT:
+      'Под этим идентификатором уже сохранено другое изменение. Обновите данные и создайте новое событие.',
     PLAN_NOT_BUILT: 'Сначала постройте первоначальный план.',
     ROUTING_UNAVAILABLE:
       'Локальная маршрутизация недоступна. Запустите OSRM по инструкции настройки дорожного графа.',

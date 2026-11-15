@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal';
 import { useWorkspace } from './context';
 import { countText, initials, staffName, stopNames, time, type ViewOrder } from './model';
 import type { Route } from './types';
+import { VisitTimes, VisitTools } from './visit-tools';
 export function Timeline({
   onSelect,
   staffId,
@@ -232,6 +233,8 @@ export function OrderDetail({
             .join(' · ')}
         </p>
         {order.reason && <div className="detail-reason">{order.reason}</div>}
+        <VisitTimes fact={d.facts?.find((f) => f.order_id === order.source.order_id)} />
+        {order.stop && <VisitTools order={order} />}
         {onAssign && (
           <button
             className="primary-button"
@@ -241,7 +244,9 @@ export function OrderDetail({
               !d.plan ||
               [
                 'Выполнена',
-                'На объекте',
+                'В пути',
+                'Прибыл на объект',
+                'Работа начата',
                 'Отменена',
                 'ПГП',
                 'Ожидает подтверждения',

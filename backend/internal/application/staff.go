@@ -250,10 +250,15 @@ func (s *Service) previewStaff(ctx context.Context, date, id string, input Staff
 		w.Unavailable = in.State.Unavailable
 		w.NewOrderAt = in.State.NewOrderAt
 		w.EndOverrides = in.State.EndOverrides
+		history, e := s.executionHistory(ctx, date, in.Generation)
+		if e != nil {
+			return out, e
+		}
+		w.Pinned = history.Pins
 		seed := in.Plan
 		seed.Routes = []dto.Route{}
 		present := map[string]bool{}
-		pinned := map[string]bool{}
+		pinned := history.Pins
 		for _, r := range in.Plan.Routes {
 			for _, stop := range r.Stops {
 				if stop.OrderId != nil && !c.Time(stop.Start).After(c.Time(day.Now)) {

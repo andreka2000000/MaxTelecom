@@ -1,4 +1,5 @@
 'use client';
+import { RatingControl } from './rating-control';
 import { useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -36,8 +37,11 @@ type ServiceRequest = {
     planned_start?: string;
     reason?: string;
     report?: string;
+    departed_at?: string;
+    arrived_at?: string;
     started_at?: string;
     completed_at?: string;
+    rating?: number;
   };
   decision_note: string;
   created_at: string;
@@ -58,6 +62,8 @@ const statuses = {
 const workflow: Record<string, string> = {
   SCHEDULED: 'Исполнитель назначен',
   UNASSIGNED: 'Ожидает назначения',
+  EN_ROUTE: 'Исполнитель выехал',
+  ARRIVED: 'Исполнитель прибыл',
   IN_PROGRESS: 'Работа начата',
   COMPLETED: 'Работа выполнена',
   CANCELLED: 'Наряд отменён',
@@ -72,13 +78,13 @@ const created = (value: string) =>
     minute: '2-digit',
     timeZone: 'Asia/Yekaterinburg',
   }).format(new Date(value));
-export function RequestsPage() {
+export function RequestsPage({ initialService }: { initialService?: string } = {}) {
   const user = useIdentity();
   const dispatcher = user.role === 'DISPATCHER';
   const client = useQueryClient();
-  const [service, setService] = useState('INTERNET');
+  const [service, setService] = useState(initialService || 'INTERNET');
   const [filter, setFilter] = useState('ALL');
-  const [composing, setComposing] = useState(false);
+  const [composing, setComposing] = useState(!!initialService);
   const submission = useRef({ signature: '', key: '' });
   const requests = useQuery({
     queryKey: ['service-requests', user.id],
@@ -369,8 +375,13 @@ function RequestCard({
             {r.order.planned_start && <p>Начало по плану: {time(r.order.planned_start)}</p>}
             {r.order.reason && <p>{r.order.reason}</p>}
             {r.order.report && <p>Результат: {r.order.report}</p>}
+            {r.order.departed_at && <p>Исполнитель выехал: {time(r.order.departed_at)}</p>}
+            {r.order.arrived_at && <p>Прибыл на объект: {time(r.order.arrived_at)}</p>}
             {r.order.started_at && <p>Работа начата: {time(r.order.started_at)}</p>}
             {r.order.completed_at && <p>Работа завершена: {time(r.order.completed_at)}</p>}
+            {!dispatcher && r.order.state === 'COMPLETED' && (
+              <RatingControl id={r.id} saved={r.order.rating || 0} />
+            )}
           </div>
         </div>
       )}

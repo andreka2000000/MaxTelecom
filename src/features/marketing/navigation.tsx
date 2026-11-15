@@ -21,7 +21,7 @@ export function Navigation() {
             Возможности
           </a>
           <a href="#roles" onClick={() => setOpen(false)}>
-            Для кого
+            Услуги
           </a>
           <a href="#how-it-works" onClick={() => setOpen(false)}>
             Как это работает

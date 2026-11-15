@@ -80,6 +80,26 @@ func run() error {
 		}
 	}
 	const file = "/demo/demo-accounts.json"
+	for _, target := range []string{"2026-11-14", "2026-11-15", "2026-11-17"} {
+		var exists bool
+		if e = store.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM days WHERE date::text=$1)", target).Scan(&exists); e != nil {
+			return e
+		}
+		if exists {
+			continue
+		}
+		if target == "2026-11-17" {
+			_, e = service.CreateDay(ctx, target)
+		} else {
+			_, e = service.CopyDay(ctx, date, target)
+		}
+		if e != nil {
+			return e
+		}
+		if _, e = service.BuildPlan(ctx, target, 5); e != nil {
+			return e
+		}
+	}
 	var accounts []auth.NewUser
 	raw, e := os.ReadFile(file)
 	if e == nil {

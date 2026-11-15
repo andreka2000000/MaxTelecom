@@ -109,3 +109,29 @@ CREATE TABLE IF NOT EXISTS clock_changes (
  PRIMARY KEY(day,generation,request_id)
 );
 INSERT INTO schema_migrations(version) VALUES(10) ON CONFLICT DO NOTHING;
+
+-- Journey milestones are independent of the actual start of work.
+ALTER TABLE visit_facts ALTER COLUMN started_at DROP NOT NULL;
+ALTER TABLE visit_facts ADD COLUMN IF NOT EXISTS departed_at timestamptz;
+ALTER TABLE visit_facts ADD COLUMN IF NOT EXISTS arrived_at timestamptz;
+ALTER TABLE visit_facts DROP CONSTRAINT IF EXISTS visit_facts_status_check;
+ALTER TABLE visit_facts ADD CONSTRAINT visit_facts_status_check CHECK(status IN ('EN_ROUTE','ARRIVED','IN_PROGRESS','COMPLETED'));
+ALTER TABLE visit_facts DROP CONSTRAINT IF EXISTS visit_facts_timeline_check;
+ALTER TABLE visit_facts ADD CONSTRAINT visit_facts_timeline_check CHECK (
+ (status <> 'EN_ROUTE' OR departed_at IS NOT NULL) AND
+ (status <> 'ARRIVED' OR (departed_at IS NOT NULL AND arrived_at IS NOT NULL)) AND
+ (status NOT IN ('IN_PROGRESS','COMPLETED') OR started_at IS NOT NULL) AND
+ (status <> 'COMPLETED' OR completed_at IS NOT NULL) AND
+ (arrived_at IS NULL OR departed_at <= arrived_at) AND
+ (started_at IS NULL OR arrived_at IS NULL OR arrived_at <= started_at) AND
+ (completed_at IS NULL OR started_at <= completed_at)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS visit_facts_one_active ON visit_facts(day,generation,staff_id) WHERE status <> 'COMPLETED';
+INSERT INTO schema_migrations(version) VALUES(11) ON CONFLICT DO NOTHING;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS request_hash text NOT NULL DEFAULT '';
+INSERT INTO schema_migrations(version) VALUES(12) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS employee_ratings (
+ request_id text PRIMARY KEY REFERENCES service_requests(id) ON DELETE CASCADE,
+ staff_id text NOT NULL,score integer NOT NULL CHECK(score BETWEEN 1 AND 5),created_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO schema_migrations(version) VALUES(13) ON CONFLICT DO NOTHING;

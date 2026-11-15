@@ -81,7 +81,7 @@ func Assign(ctx context.Context, w *c.World, old dto.Plan, orderID, target strin
 		}
 		limit := 0
 		for j, s := range r.Stops {
-			if !c.Time(s.Start).After(c.Time(w.Day.Now)) {
+			if !c.Time(s.Start).After(c.Time(w.Day.Now)) || (s.OrderId != nil && w.Pinned[*s.OrderId]) {
 				limit = j + 1
 			}
 		}

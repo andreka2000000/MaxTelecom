@@ -3,6 +3,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import '@/features/workspace/workspace.css';
 import '@/features/workspace/access.css';
 import '@/features/workspace/mobile.css';
+import '@/features/workspace/black-theme.css';
 import { requireUser } from '@/features/auth/server';
 import { AuthProvider } from '@/features/auth/context';
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {

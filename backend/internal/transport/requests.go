@@ -33,6 +33,7 @@ type ServiceRequest struct {
 	UpdatedAt      time.Time     `json:"updated_at"`
 }
 type RequestOrder struct {
+	Rating       int             `json:"rating,omitempty"`
 	StaffID      string          `json:"staff_id,omitempty"`
 	ID           string          `json:"id"`
 	Date         string          `json:"date"`
@@ -42,11 +43,14 @@ type RequestOrder struct {
 	PlannedStart *dto.DateTime   `json:"planned_start,omitempty"`
 	Reason       string          `json:"reason,omitempty"`
 	Report       string          `json:"report,omitempty"`
+	DepartedAt   string          `json:"departed_at,omitempty"`
+	ArrivedAt    string          `json:"arrived_at,omitempty"`
 	StartedAt    string          `json:"started_at,omitempty"`
 	CompletedAt  string          `json:"completed_at,omitempty"`
 }
 
 func (a *API) requestRoutes(mux *http.ServeMux, guard func([]string, func(http.ResponseWriter, *http.Request, auth.User)) http.HandlerFunc) {
+	mux.HandleFunc("POST /ui/v1/requests/{id}/rating", guard([]string{auth.Subscriber}, a.rateRequest))
 	mux.HandleFunc("GET /ui/v1/requests", guard([]string{auth.Dispatcher, auth.Subscriber}, func(w http.ResponseWriter, r *http.Request, u auth.User) {
 		rows, e := a.Service.Store.Pool.Query(r.Context(), `SELECT r.id,u.name,r.service,r.address,r.phone,r.description,r.preferred_date,r.status,r.decision_note,r.created_at,r.updated_at,coalesce(l.day,''),coalesce(l.generation,0),coalesce(l.order_id,'') FROM service_requests r JOIN app_users u ON u.id=r.user_id LEFT JOIN request_orders l ON l.request_id=r.id WHERE ($1='DISPATCHER' OR r.user_id=$2) ORDER BY r.created_at DESC LIMIT 500`, u.Role, u.ID)
 		if e != nil {
@@ -75,6 +79,10 @@ func (a *API) requestRoutes(mux *http.ServeMux, guard func([]string, func(http.R
 				continue
 			}
 			item.Order = &RequestOrder{ID: item.LinkOrder, Date: item.LinkDay, State: "REQUIRES_REVIEW"}
+			if e := a.Service.Store.Pool.QueryRow(r.Context(), "SELECT coalesce((SELECT score FROM employee_ratings WHERE request_id=$1),0)", item.ID).Scan(&item.Order.Rating); e != nil {
+				fail(w, e)
+				return
+			}
 			data, ok := cache[item.LinkDay]
 			if !ok {
 				var e error
@@ -139,6 +147,8 @@ func (a *API) requestRoutes(mux *http.ServeMux, guard func([]string, func(http.R
 				if f.OrderID == item.LinkOrder {
 					item.Order.State = f.Status
 					item.Order.Report = f.Report
+					item.Order.DepartedAt = f.DepartedAt
+					item.Order.ArrivedAt = f.ArrivedAt
 					item.Order.StartedAt = f.StartedAt
 					item.Order.CompletedAt = f.CompletedAt
 				}

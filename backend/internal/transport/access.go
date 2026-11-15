@@ -270,6 +270,11 @@ func (a *API) ApplicationHandler(manager *auth.Manager, origins []string, secure
 // An explicit DTO projection prevents leaks of other staff, orders, event
 // payloads, PGP membership, optimization totals and suggested assignees.
 func personalWorkspace(data postgres.Workspace, staffID string) postgres.Workspace {
+	ratings := map[string]postgres.StaffRating{}
+	if value, ok := data.Ratings[staffID]; ok {
+		ratings[staffID] = value
+	}
+	data.Ratings = ratings
 	data.StaffChanges = []postgres.StaffChangeRecord{}
 	data.StaffChangeCount = 0
 	data.Assignments = []postgres.AssignmentRecord{}
@@ -305,6 +310,13 @@ func personalWorkspace(data postgres.Workspace, staffID string) postgres.Workspa
 		}
 	}
 	data.Reference.Staff = staff
+	contacts := []postgres.OrderContact{}
+	for _, contact := range data.Contacts {
+		if ownOrders[contact.OrderID] {
+			contacts = append(contacts, contact)
+		}
+	}
+	data.Contacts = contacts
 	orders := []dto.Order{}
 	for _, o := range data.Day.Orders {
 		if ownOrders[o.OrderId] {

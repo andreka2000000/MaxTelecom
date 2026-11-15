@@ -42,6 +42,7 @@ export function RequestHandoff({
   });
   if (!w || !order.staff_id) return null;
   const sameDay = w.data?.day.date === order.date;
+  const demo = w.clock.data?.mode === 'DEMO';
   const future =
     sameDay && order.planned_start && Date.parse(order.planned_start) > Date.parse(w.data!.day.now);
   const account = accounts.data?.find((u) => u.staff_id === order.staff_id && !u.disabled);
@@ -65,7 +66,7 @@ export function RequestHandoff({
         <button className="secondary-button" onClick={() => w.setDate(order.date)}>
           Выбрать смену {order.date}
         </button>
-      ) : future && order.state === 'SCHEDULED' ? (
+      ) : demo && future && ['SCHEDULED', 'EN_ROUTE', 'ARRIVED'].includes(order.state) ? (
         <>
           <button
             className="secondary-button"
@@ -81,7 +82,7 @@ export function RequestHandoff({
           </p>
         </>
       ) : null}
-      {confirm && (
+      {confirm && demo && (
         <Modal
           title="Перевести время смены"
           onClose={() => {

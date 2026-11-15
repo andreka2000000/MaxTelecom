@@ -42,8 +42,12 @@ func (s *Service) event(ctx context.Context, date string, ev dto.EventInput, sta
 	if strings.TrimSpace(ev.EventId) == "" {
 		return result, &Error{400, "BAD_REQUEST", "event_id must not be empty"}
 	}
+	requestHash := digest(ev)
 	apply := func() error {
-		duplicate, e := s.Store.Duplicate(ctx, date, ev.EventId)
+		duplicate, e := s.Store.Duplicate(ctx, date, ev, requestHash)
+		if errors.Is(e, postgres.ErrEventConflict) {
+			return eventConflict("EVENT_ID_CONFLICT", "Этот идентификатор уже использован для другого изменения. Обновите данные и отправьте новое событие.")
+		}
 		if e != nil {
 			return e
 		}
@@ -77,14 +81,9 @@ func (s *Service) event(ctx context.Context, date string, ev dto.EventInput, sta
 				return e
 			}
 		}
-		if ev.Type == "VISIT_DELAYED" || ev.Type == "ORDER_TRANSFERRED" {
-			var completed bool
-			if e = s.Store.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM visit_facts WHERE day=$1 AND generation=$2 AND order_id=$3 AND status='COMPLETED')", date, in.Generation, ev.OrderId).Scan(&completed); e != nil {
-				return e
-			}
-			if completed {
-				return &Error{409, "VISIT_COMPLETED", "Выполнение уже подтверждено. Задержка или передача завершённого визита невозможна."}
-			}
+		history, e := s.executionHistory(ctx, date, in.Generation)
+		if e != nil {
+			return e
 		}
 		clock, e := domain.NewClock(string(in.Day.Now))
 		if staffScope != "" {
@@ -108,6 +107,14 @@ func (s *Service) event(ctx context.Context, date string, ev dto.EventInput, sta
 		if e != nil {
 			return e
 		}
+		if status := history.Status[ev.OrderId]; status != "" {
+			if status == "COMPLETED" && (ev.Type == "VISIT_DELAYED" || ev.Type == "ORDER_TRANSFERRED" || ev.Type == "ORDER_CANCELLED") {
+				return &Error{409, "VISIT_COMPLETED", "Выполнение уже подтверждено. Завершённый визит нельзя изменить или отменить."}
+			}
+			if ev.Type == "ORDER_TRANSFERRED" || ev.Type == "ORDER_CANCELLED" || (ev.Type == "VISIT_DELAYED" && status != "IN_PROGRESS") {
+				return &Error{409, "VISIT_EXECUTION_LOCKED", "Исполнитель уже принял задание в работу. Отмена или передача активного визита невозможна; задержку можно сообщить после начала работы."}
+			}
+		}
 		if _, e = domain.NewClock(string(ev.Timestamp)); e != nil {
 			return invalid("Invalid event timestamp: %s", e)
 		}
@@ -128,7 +135,7 @@ func (s *Service) event(ctx context.Context, date string, ev dto.EventInput, sta
 		for _, x := range in.Plan.Cancelled {
 			cancelled[x.OrderId] = x
 		}
-		pinned := map[string]bool{}
+		pinned := history.Pins
 		find := func(id string) (dto.Stop, string, bool) {
 			for _, r := range in.Plan.Routes {
 				for _, x := range r.Stops {
@@ -232,6 +239,7 @@ func (s *Service) event(ctx context.Context, date string, ev dto.EventInput, sta
 			return e
 		}
 		world.Previous = &in.Plan
+		world.Pinned = pinned
 		world.EndOverrides = state.EndOverrides
 		world.NewOrderAt = state.NewOrderAt
 		world.Unavailable = state.Unavailable
@@ -264,7 +272,10 @@ func (s *Service) event(ctx context.Context, date string, ev dto.EventInput, sta
 			}
 		}
 		result = dto.EventResult{EventId: ev.EventId, Accepted: true, Duplicate: false, PlanVersion: plan.PlanVersion, AsOf: ev.Timestamp, ProcessingMs: &ms, ChangedStaffIds: changed, NewAlerts: newAlerts}
-		hooks := []func(pgx.Tx) error{}
+		hooks := []func(pgx.Tx) error{func(tx pgx.Tx) error {
+			_, e := tx.Exec(ctx, "UPDATE events SET request_hash=$4 WHERE day::text=$1 AND generation=$2 AND event_id=$3", date, in.Generation, ev.EventId, requestHash)
+			return e
+		}}
 		if in.ClockMode == "LIVE" && (extension == nil || !extension.clockSync) {
 			hooks = append(hooks, func(tx pgx.Tx) error {
 				_, e := tx.Exec(ctx, `UPDATE days SET clock_error='',clock_synced_at=$2 WHERE date::text=$1`, date, s.wallNow())

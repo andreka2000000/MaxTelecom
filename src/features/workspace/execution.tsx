@@ -1,16 +1,23 @@
 'use client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MapPin, CheckCircle2, Play } from 'lucide-react';
+import { MapPin, CheckCircle2, Play, Navigation, Flag } from 'lucide-react';
 import { useWorkspace } from './context';
 import { request } from '@/shared/api/client';
 import { ordersView, time } from './model';
-import { visitQueue } from './execution-model';
+import {
+  executionSteps,
+  isActiveVisit,
+  nextExecutionStep,
+  plannedDeparture,
+  visitQueue,
+} from './execution-model';
+import { VisitTimes, VisitTools } from './visit-tools';
 export function ExecutionPanel({ onMap }: { onMap: (id: string) => void }) {
   const w = useWorkspace();
   const client = useQueryClient();
   const d = w.data!;
   const orders = visitQueue(ordersView(d));
-  const active = d.facts?.find((f) => f.status === 'IN_PROGRESS');
+  const active = d.facts?.find((f) => isActiveVisit(f.status));
   const save = useMutation({
     mutationFn: (input: { id: string; action: string; report: string }) =>
       request('', `/ui/v1/days/${d.day.date}/orders/${encodeURIComponent(input.id)}/execution`, {
@@ -29,24 +36,48 @@ export function ExecutionPanel({ onMap }: { onMap: (id: string) => void }) {
       <span className="eyebrow">ФАКТИЧЕСКОЕ ВЫПОЛНЕНИЕ</span>
       <h2>Мои задания</h2>
       <p className="muted">
-        Подтверждайте начало и результат работы. Модельное время смены: {time(d.day.now)}.
+        Подтверждайте выезд, прибытие, начало и результат работы. Время смены: {time(d.day.now)}.
+        Статусы отмечаются вручную, положение мастера по GPS не отслеживается.
       </p>
-      {orders.map((o) => {
+      {orders.map((o, index) => {
         const fact = d.facts?.find((f) => f.order_id === o.source.order_id);
         const started = fact?.status === 'IN_PROGRESS';
         const done = fact?.status === 'COMPLETED';
-        const ready = Date.parse(d.day.now) >= Date.parse(o.stop!.start);
-        const blocked = !!active && active.order_id !== o.source.order_id;
+        const step = nextExecutionStep(fact?.status);
+        const departure = plannedDeparture(o.stop!);
+        const ready =
+          step?.action === 'DEPART'
+            ? Date.parse(d.day.now) >= Date.parse(departure)
+            : step?.action !== 'START' || Date.parse(d.day.now) >= Date.parse(o.stop!.start);
+        const previous =
+          !fact &&
+          orders
+            .slice(0, index)
+            .some(
+              (previousOrder) =>
+                !d.facts?.some(
+                  (f) => f.order_id === previousOrder.source.order_id && f.status === 'COMPLETED',
+                ),
+            );
+        const blocked = (!!active && active.order_id !== o.source.order_id) || previous;
+        const currentStep = executionSteps.findIndex((item) => item.status === fact?.status);
+        const recorded = [
+          fact?.departed_at,
+          fact?.arrived_at,
+          fact?.started_at,
+          fact?.completed_at,
+        ];
         return (
           <form
             className={`request-decision live-form execution-task ${done ? 'task-done' : ''}`}
             key={o.source.order_id}
             onSubmit={(e) => {
               e.preventDefault();
+              if (!step || !ready || blocked || save.isPending || w.busy) return;
               const f = new FormData(e.currentTarget);
               save.mutate({
                 id: o.source.order_id,
-                action: started ? 'COMPLETE' : 'START',
+                action: step.action,
                 report: String(f.get('report') || ''),
               });
             }}
@@ -59,15 +90,24 @@ export function ExecutionPanel({ onMap }: { onMap: (id: string) => void }) {
             <small>
               {o.source.order_id} · {time(o.stop!.start)}–{time(o.stop!.end)}
             </small>
+            <small className="muted">Выезд по плану с {time(departure)}</small>
+            <ol className="visit-progress" aria-label="Этапы визита">
+              {executionSteps.map((item, itemIndex) => (
+                <li
+                  key={item.action}
+                  className={recorded[itemIndex] ? 'is-confirmed' : ''}
+                  aria-current={itemIndex === currentStep ? 'step' : undefined}
+                >
+                  <span>{recorded[itemIndex] ? <CheckCircle2 size={14} /> : itemIndex + 1}</span>
+                  {item.label}
+                </li>
+              ))}
+            </ol>
             <button className="text-button" type="button" onClick={() => onMap(o.source.order_id)}>
               <MapPin size={15} /> Показать точку на карте
             </button>
-            {fact && (
-              <p className="muted">
-                Начал: {time(fact.started_at)}
-                {fact.completed_at ? ` · Закончил: ${time(fact.completed_at)}` : ''}
-              </p>
-            )}
+            <VisitTools order={o} />
+            <VisitTimes fact={fact} />
             {done ? (
               <p className="execution-report">
                 <CheckCircle2 size={17} />
@@ -85,18 +125,28 @@ export function ExecutionPanel({ onMap }: { onMap: (id: string) => void }) {
                   className="primary-button"
                   disabled={save.isPending || w.busy || !ready || blocked}
                 >
-                  {started ? <CheckCircle2 size={16} /> : <Play size={16} />}
+                  {started ? (
+                    <CheckCircle2 size={16} />
+                  ) : step?.action === 'DEPART' ? (
+                    <Navigation size={16} />
+                  ) : step?.action === 'ARRIVE' ? (
+                    <Flag size={16} />
+                  ) : (
+                    <Play size={16} />
+                  )}
                   {save.isPending && save.variables?.id === o.source.order_id
                     ? 'Сохраняем…'
-                    : started
-                      ? 'Закончил работу'
-                      : 'Начал работу'}
+                    : step?.label}
                 </button>
-                {blocked && <small className="muted">Сначала завершите текущее задание.</small>}
+                {blocked && (
+                  <small className="muted">Сначала завершите предыдущее задание по маршруту.</small>
+                )}
                 {!ready && (
                   <small className="muted">
-                    Доступно с {time(o.stop!.start)} по времени смены. Для демонстрации диспетчер
-                    может нажать «К началу визита» в обращении абонента.
+                    {step?.action === 'DEPART'
+                      ? `Выезд доступен с ${time(departure)} по времени смены.`
+                      : `Начать работу можно с ${time(o.stop!.start)} по времени смены.`}{' '}
+                    В деморежиме диспетчер может перевести время к началу визита.
                   </small>
                 )}
               </>

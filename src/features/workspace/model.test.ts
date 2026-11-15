@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import type { Snapshot } from './types';
 import { ordersView, locationPoints, fromLocal, localInput } from './model';
-const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./__fixtures__/${name}.json`, import.meta.url), 'utf8'));
+const fixture = (name: string) =>
+  JSON.parse(readFileSync(new URL(`./__fixtures__/${name}.json`, import.meta.url), 'utf8'));
 function data(): Snapshot {
   return {
     reference: fixture('reference'),
@@ -58,6 +59,13 @@ describe('live workspace presentation', () => {
         report: 'Работа выполнена',
       },
     ];
+    d.facts[0].status = 'EN_ROUTE';
+    expect(ordersView(d)[0].status).toBe('В пути');
+    d.facts[0].status = 'ARRIVED';
+    expect(ordersView(d)[0].status).toBe('Прибыл на объект');
+    d.facts[0].status = 'IN_PROGRESS';
+    expect(ordersView(d)[0].status).toBe('Работа начата');
+    d.facts[0].status = 'COMPLETED';
     expect(ordersView(d)[0].status).toBe('Выполнена');
     expect(ordersView(d)[0].title).toContain('неисправности');
     expect(locationPoints(d)['B-00412']).toEqual([60.6531, 56.8712]);

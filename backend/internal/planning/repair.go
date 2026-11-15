@@ -219,7 +219,7 @@ func Repair(ctx context.Context, w *c.World, old dto.Plan, cancelled map[string]
 	for i, r := range old.Routes {
 		limit := 0
 		for j, x := range r.Stops {
-			if c.Time(x.Start).Before(c.Time(w.Day.Now)) || (x.OrderId != nil && pinned[*x.OrderId]) {
+			if c.Time(x.Start).Before(c.Time(w.Day.Now)) || (x.OrderId != nil && (pinned[*x.OrderId] || w.Pinned[*x.OrderId])) {
 				limit = j + 1
 			}
 		}

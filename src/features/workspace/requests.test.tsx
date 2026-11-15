@@ -10,6 +10,8 @@ vi.mock('@/components/layout/page-header', () => ({ PageHeader: () => null }));
 it.each([
   'SCHEDULED',
   'UNASSIGNED',
+  'EN_ROUTE',
+  'ARRIVED',
   'IN_PROGRESS',
   'COMPLETED',
   'CANCELLED',
@@ -36,6 +38,10 @@ it.each([
           id: 'ORD-20261026-0002',
           date: '2026-10-26',
           state,
+          ...(state === 'EN_ROUTE' || state === 'ARRIVED'
+            ? { departed_at: '2026-10-26T08:30:00+05:00' }
+            : {}),
+          ...(state === 'ARRIVED' ? { arrived_at: '2026-10-26T09:00:00+05:00' } : {}),
           ...(state === 'COMPLETED' ? { report: 'Связь восстановлена' } : {}),
         },
       },
@@ -49,5 +55,14 @@ it.each([
   expect(html).toContain('ORD-20261026-0002');
   expect(html).not.toContain('undefined');
   if (state === 'COMPLETED') expect(html).toContain('Связь восстановлена');
+  if (state === 'EN_ROUTE') {
+    expect(html).toContain('Исполнитель выехал');
+    expect(html).toContain('08:30');
+  }
+  if (state === 'ARRIVED') {
+    expect(html).toContain('Исполнитель прибыл');
+    expect(html).toContain('Прибыл на объект:');
+    expect(html).toContain('09:00');
+  }
   expect(html).not.toContain('Одобрить и распределить');
 });

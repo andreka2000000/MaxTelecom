@@ -33,7 +33,24 @@ export type DaySummary = {
   staff_total?: number;
   source_date?: string;
 };
+export type VisitFact = {
+  order_id: string;
+  staff_id: string;
+  status: 'EN_ROUTE' | 'ARRIVED' | 'IN_PROGRESS' | 'COMPLETED';
+  departed_at?: string;
+  arrived_at?: string;
+  started_at?: string | null;
+  completed_at?: string;
+  report: string;
+};
+export type OrderContact = {
+  order_id: string;
+  name: string;
+  phone: string;
+  description: string;
+};
 export type Snapshot = {
+  ratings?: Record<string, { average: number; count: number }>;
   revision?: number;
   staff_change_count?: number;
   staff_changes?: StaffChangeRecord[];
@@ -49,14 +66,8 @@ export type Snapshot = {
     as_of: string;
     plan_version: number;
   }[];
-  facts?: {
-    order_id: string;
-    staff_id: string;
-    status: 'IN_PROGRESS' | 'COMPLETED';
-    started_at: string;
-    completed_at?: string;
-    report: string;
-  }[];
+  facts?: VisitFact[];
+  contacts?: OrderContact[];
   day: Day;
   reference: Reference;
   plan: Plan | null;

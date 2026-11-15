@@ -1945,3 +1945,74 @@
     display: none;
   }
 }
+.heroCopy h1 em {
+  font-family: var(--font-russo-one), sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  font-size: 0.94em;
+}
+.serviceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+.serviceCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 30px;
+  border: 1px solid #39323f;
+  border-radius: 16px;
+  background: #101012;
+}
+.serviceCard > svg {
+  color: #bb96fa;
+}
+.serviceCard h3 {
+  font-size: 23px;
+  line-height: 1.3;
+  margin: 0;
+}
+.serviceCard p {
+  color: #b2aaba;
+  line-height: 1.8;
+  margin: 0 0 12px;
+  flex: 1;
+}
+.serviceAuth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #b2aaba;
+  margin-top: 25px;
+  line-height: 1.7;
+}
+@media (max-width: 800px) {
+  .serviceGrid {
+    grid-template-columns: 1fr;
+  }
+  .serviceAuth {
+    align-items: flex-start;
+  }
+  .serviceCard {
+    padding: 25px;
+  }
+}
+.heroCopy {
+  min-width: 0;
+}
+.heroCopy h1 em {
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 800px) {
+  .heroGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .heroCopy h1 {
+    white-space: normal;
+  }
+}

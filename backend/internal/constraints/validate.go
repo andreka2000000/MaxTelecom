@@ -55,7 +55,9 @@ type World struct {
 	Groups    []dto.PgpGroup
 	// Event processing will supply these facts; the validator never infers them
 	// from a proposed plan or silently approves changed history.
-	Previous     *dto.Plan
+	Previous *dto.Plan
+	// Pinned visits already have execution facts, even when their planned start is future.
+	Pinned       map[string]bool
 	EndOverrides map[string]dto.DateTime
 	NewOrderAt   map[string]dto.DateTime
 	Unavailable  map[string][]domain.Unavailability
@@ -276,10 +278,13 @@ func (w *World) Validate(p dto.Plan) error {
 	for _, r := range w.Previous.Routes {
 		oldRoutes[r.StaffId] = r
 		nr := routes[r.StaffId]
+		limit := 0
 		for i, x := range r.Stops {
-			if !Time(x.Start).Before(now) {
-				continue
+			if Time(x.Start).Before(now) || (x.OrderId != nil && w.Pinned[*x.OrderId]) {
+				limit = i + 1
 			}
+		}
+		for i, x := range r.Stops[:limit] {
 			if i >= len(nr.Stops) {
 				return bad("H10", "started stop removed")
 			}

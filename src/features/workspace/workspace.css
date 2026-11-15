@@ -1549,6 +1549,96 @@
   display: grid;
   gap: 12px;
 }
+.visit-tools {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+  min-width: 0;
+}
+
+.execution-task > .visit-tools {
+  display: grid;
+}
+.visit-tools > .secondary-button {
+  justify-content: center;
+  text-align: center;
+}
+.visit-contact {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #503b65;
+  border-radius: 10px;
+  background: #1c1227;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.visit-contact strong,
+.visit-phone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.visit-contact p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.visit-phone {
+  color: #dfc5ff;
+  padding: 8px 0;
+  text-decoration: underline;
+  min-height: 44px;
+}
+.visit-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.visit-progress li {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  padding: 12px 6px;
+  border: 1px solid #42334e;
+  border-radius: 8px;
+  color: #a99db5;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+.visit-progress li > span {
+  display: grid;
+  place-items: center;
+  min-height: 20px;
+}
+.visit-progress li.is-confirmed {
+  color: #d8b9f3;
+  border-color: #80609c;
+  background: #2a1939;
+}
+.visit-progress li[aria-current='step'] {
+  border-color: #c69be9;
+}
+.visit-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 12px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.visit-times dt {
+  color: #a99db5;
+}
+.visit-times dd {
+  margin: 0;
+  color: #e1d3ee;
+}
 .assignment-impact {
   padding: 16px;
   border: 1px solid #765194;

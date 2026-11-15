@@ -79,6 +79,11 @@ func (s *Service) assignmentContext(ctx context.Context, date, id string) (postg
 	if e != nil {
 		return in, w, out, e
 	}
+	history, e := s.executionHistory(ctx, date, in.Generation)
+	if e != nil {
+		return in, w, out, e
+	}
+	w.Pinned = history.Pins
 	order, ok := w.Orders[id]
 	if !ok {
 		return in, w, out, &Error{404, "ORDER_NOT_FOUND", "Наряд не найден в выбранной смене."}
@@ -121,7 +126,7 @@ func (s *Service) assignmentContext(ctx context.Context, date, id string) (postg
 		return in, w, out, e
 	}
 	if hasFact {
-		out.Reason = "Работа уже начата или завершена исполнителем."
+		out.Reason = "Исполнитель уже выехал, прибыл, начал или завершил работу. Назначение зафиксировано."
 		return in, w, out, nil
 	}
 	out.Allowed = true

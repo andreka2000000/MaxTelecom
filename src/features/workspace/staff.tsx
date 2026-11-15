@@ -108,6 +108,11 @@ export function StaffTeam() {
                 <div>
                   <h3>{staffName(s)}</h3>
                   <small>
+                    {d.ratings?.[s.staff_id]
+                      ? `★ ${d.ratings[s.staff_id].average} · оценок: ${d.ratings[s.staff_id].count}`
+                      : 'Пока нет оценок'}
+                  </small>
+                  <small>
                     {s.staff_id} ·{' '}
                     {d.reference.service_centers.find(
                       (c) => c.service_center_id === s.service_center_id,

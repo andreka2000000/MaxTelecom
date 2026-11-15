@@ -35,7 +35,11 @@ func (s *Store) PlanningInputs(ctx context.Context, date string) (Inputs, error)
 	if e != nil {
 		return in, e
 	}
-	if in.EventCount > 0 {
+	var executed bool
+	if e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM visit_facts WHERE day=$1 AND generation=$2)", date, in.Generation).Scan(&executed); e != nil {
+		return in, e
+	}
+	if in.EventCount > 0 || executed {
 		return in, ErrEvents
 	}
 	if e = json.Unmarshal(day, &in.Day); e != nil {
@@ -63,7 +67,11 @@ func (s *Store) Publish(ctx context.Context, in Inputs, p dto.Plan) error {
 		if e != nil {
 			return e
 		}
-		if events > 0 {
+		var executed bool
+		if e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM visit_facts WHERE day=$1 AND generation=$2)", in.Day.Date, gen).Scan(&executed); e != nil {
+			return e
+		}
+		if events > 0 || executed {
 			return ErrEvents
 		}
 		if gen != in.Generation || revision != in.Revision || rv != in.ReferenceVersion || mv != in.MatrixVersion {

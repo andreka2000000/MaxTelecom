@@ -11,6 +11,7 @@ import { RoadPanel } from './road-routing';
 import { useIdentity } from '@/features/auth/context';
 import { ExecutionPanel } from './execution';
 import { nextVisit } from './execution-model';
+import { VisitTimes, VisitTools } from './visit-tools';
 export function LiveTechnician() {
   const w = useWorkspace();
   return (
@@ -94,7 +95,7 @@ function TechnicianContent() {
       </section>
       <nav className="technician-shortcuts" aria-label="Разделы маршрута">
         <a href="#route-map">Карта и адрес</a>
-        <a href="#my-tasks">Начать / завершить</a>
+        <a href="#my-tasks">Этапы визита</a>
         <a href="#schedule">Расписание</a>
       </nav>
       <div className="technician-grid">
@@ -104,7 +105,10 @@ function TechnicianContent() {
             <div className="live-section-title">
               <div>
                 <span className="eyebrow">
-                  {current?.status === 'На объекте' ? 'РАБОТА НА ОБЪЕКТЕ' : 'СЛЕДУЮЩЕЕ ЗАДАНИЕ'}
+                  {current &&
+                  ['В пути', 'Прибыл на объект', 'Работа начата'].includes(current.status)
+                    ? 'ТЕКУЩЕЕ ЗАДАНИЕ'
+                    : 'СЛЕДУЮЩЕЕ ЗАДАНИЕ'}
                 </span>
                 <h2>{current?.title || 'Нет предстоящих визитов'}</h2>
               </div>
@@ -115,6 +119,7 @@ function TechnicianContent() {
                 <span className="state-badge violet">
                   {time(current.stop!.start)}–{time(current.stop!.end)}
                 </span>
+                <span className={`state-badge ${current.tone}`}>{current.status}</span>
                 <p className="equipment-note">
                   Взять с собой:{' '}
                   {Object.entries(current.source.required_equipment)
@@ -134,8 +139,10 @@ function TechnicianContent() {
                 >
                   <MapPin size={16} /> Показать точку на карте
                 </button>
+                <VisitTools order={current} />
+                <VisitTimes fact={d.facts?.find((f) => f.order_id === current.source.order_id)} />
                 <a className="text-button" href="#my-tasks">
-                  К началу и завершению работы
+                  К этапам выполнения визита
                 </a>
               </>
             )}

@@ -37,18 +37,20 @@ func (s *Store) Days(ctx context.Context) ([]DaySummary, error) {
 }
 
 type Workspace struct {
-	Revision         int64               `json:"revision"`
-	StaffChanges     []StaffChangeRecord `json:"staff_changes"`
-	StaffChangeCount int64               `json:"staff_change_count"`
-	Assignments      []AssignmentRecord  `json:"assignments"`
-	AssignmentCount  int64               `json:"assignment_count"`
-	Facts            []VisitFact         `json:"facts"`
-	Day              dto.DayInput        `json:"day"`
-	Reference        dto.ReferenceData   `json:"reference"`
-	Plan             *dto.Plan           `json:"plan"`
-	Events           []dto.EventInput    `json:"events"`
-	Generation       int64               `json:"generation"`
-	EventCount       int64               `json:"event_count"`
+	Ratings          map[string]StaffRating `json:"ratings"`
+	Revision         int64                  `json:"revision"`
+	StaffChanges     []StaffChangeRecord    `json:"staff_changes"`
+	StaffChangeCount int64                  `json:"staff_change_count"`
+	Assignments      []AssignmentRecord     `json:"assignments"`
+	AssignmentCount  int64                  `json:"assignment_count"`
+	Facts            []VisitFact            `json:"facts"`
+	Contacts         []OrderContact         `json:"contacts"`
+	Day              dto.DayInput           `json:"day"`
+	Reference        dto.ReferenceData      `json:"reference"`
+	Plan             *dto.Plan              `json:"plan"`
+	Events           []dto.EventInput       `json:"events"`
+	Generation       int64                  `json:"generation"`
+	EventCount       int64                  `json:"event_count"`
 }
 
 func (s *Store) Workspace(ctx context.Context, date string) (Workspace, error) {
@@ -104,14 +106,19 @@ func (s *Store) Workspace(ctx context.Context, date string) (Workspace, error) {
 	if e != nil {
 		return out, e
 	}
-	rows, e = tx.Query(ctx, "SELECT order_id,staff_id,status,to_char(started_at AT TIME ZONE 'Asia/Yekaterinburg','YYYY-MM-DD\"T\"HH24:MI:SS')||'+05:00',CASE WHEN completed_at IS NULL THEN '' ELSE to_char(completed_at AT TIME ZONE 'Asia/Yekaterinburg','YYYY-MM-DD\"T\"HH24:MI:SS')||'+05:00' END,report FROM visit_facts WHERE day=$1 AND generation=$2", date, out.Generation)
+	rows, e = tx.Query(ctx, `SELECT order_id,staff_id,status,
+ coalesce(to_char(started_at AT TIME ZONE 'Asia/Yekaterinburg','YYYY-MM-DD"T"HH24:MI:SS')||'+05:00',''),
+ coalesce(to_char(completed_at AT TIME ZONE 'Asia/Yekaterinburg','YYYY-MM-DD"T"HH24:MI:SS')||'+05:00',''),report,
+ coalesce(to_char(departed_at AT TIME ZONE 'Asia/Yekaterinburg','YYYY-MM-DD"T"HH24:MI:SS')||'+05:00',''),
+ coalesce(to_char(arrived_at AT TIME ZONE 'Asia/Yekaterinburg','YYYY-MM-DD"T"HH24:MI:SS')||'+05:00','')
+ FROM visit_facts WHERE day=$1 AND generation=$2 ORDER BY order_id`, date, out.Generation)
 	if e != nil {
 		return out, e
 	}
 	out.Facts = []VisitFact{}
 	for rows.Next() {
 		var fact VisitFact
-		if e = rows.Scan(&fact.OrderID, &fact.StaffID, &fact.Status, &fact.StartedAt, &fact.CompletedAt, &fact.Report); e != nil {
+		if e = rows.Scan(&fact.OrderID, &fact.StaffID, &fact.Status, &fact.StartedAt, &fact.CompletedAt, &fact.Report, &fact.DepartedAt, &fact.ArrivedAt); e != nil {
 			rows.Close()
 			return out, e
 		}
@@ -168,14 +175,78 @@ func (s *Store) Workspace(ctx context.Context, date string) (Workspace, error) {
 	if e != nil {
 		return out, e
 	}
+	// Contact links are generation-specific. Historical facts never grant access.
+	assigned := map[string]bool{}
+	if out.Plan != nil {
+		for _, route := range out.Plan.Routes {
+			for _, stop := range route.Stops {
+				if stop.Type == "VISIT" && stop.OrderId != nil {
+					assigned[*stop.OrderId] = true
+				}
+			}
+		}
+	}
+	rows, e = tx.Query(ctx, `SELECT l.order_id,u.name,r.phone,r.description FROM request_orders l JOIN service_requests r ON r.id=l.request_id JOIN app_users u ON u.id=r.user_id WHERE l.day=$1 AND l.generation=$2 ORDER BY l.order_id`, date, out.Generation)
+	if e != nil {
+		return out, e
+	}
+	out.Contacts = []OrderContact{}
+	for rows.Next() {
+		var contact OrderContact
+		if e = rows.Scan(&contact.OrderID, &contact.Name, &contact.Phone, &contact.Description); e != nil {
+			rows.Close()
+			return out, e
+		}
+		if assigned[contact.OrderID] {
+			out.Contacts = append(out.Contacts, contact)
+		}
+	}
+	e = rows.Err()
+	rows.Close()
+	if e != nil {
+		return out, e
+	}
+	rows, e = tx.Query(ctx, "SELECT staff_id,round(avg(score),2)::float8,count(*) FROM employee_ratings GROUP BY staff_id")
+	if e != nil {
+		return out, e
+	}
+	out.Ratings = map[string]StaffRating{}
+	for rows.Next() {
+		var id string
+		var rating StaffRating
+		if e = rows.Scan(&id, &rating.Average, &rating.Count); e != nil {
+			rows.Close()
+			return out, e
+		}
+		out.Ratings[id] = rating
+	}
+	e = rows.Err()
+	rows.Close()
+	if e != nil {
+		return out, e
+	}
 	return out, tx.Commit(ctx)
+}
+
+type StaffRating struct {
+	Average float64 `json:"average"`
+	Count   int     `json:"count"`
 }
 
 type VisitFact struct {
 	OrderID     string `json:"order_id"`
 	StaffID     string `json:"staff_id"`
 	Status      string `json:"status"`
+	DepartedAt  string `json:"departed_at,omitempty"`
+	ArrivedAt   string `json:"arrived_at,omitempty"`
 	StartedAt   string `json:"started_at"`
 	CompletedAt string `json:"completed_at,omitempty"`
 	Report      string `json:"report"`
+}
+
+type OrderContact struct {
+	OrderID     string `json:"order_id"`
+	Name        string `json:"name"`
+	Phone       string `json:"phone"`
+	Description string `json:"description"`
 }

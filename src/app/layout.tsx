@@ -11,6 +11,14 @@ const manrope = localFont({
   display: 'swap',
 });
 
+const russoOne = localFont({
+  src: '../../public/fonts/RussoOne-Regular.ttf',
+  weight: '400',
+  style: 'normal',
+  variable: '--font-russo-one',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: {
     default: 'МаксТелеком — порядок там, где раньше был хаос',
@@ -21,7 +29,7 @@ export const metadata: Metadata = {
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ru" className={manrope.variable}>
+    <html lang="ru" className={`${manrope.variable} ${russoOne.variable}`}>
       <body>{children}</body>
     </html>
   );
